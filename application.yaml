@@ -571,6 +571,7 @@ spec:
             allowPrivilegeEscalation: false
             capabilities:
               drop: ["ALL"]
+              add: ["CHOWN", "DAC_OVERRIDE", "FOWNER", "SETGID", "SETUID"]
           env:
             - name: VUE_APP_ORDER_SERVICE_URL
               value: "http://order-service:3000/"
@@ -642,6 +643,7 @@ spec:
             allowPrivilegeEscalation: false
             capabilities:
               drop: ["ALL"]
+              add: ["CHOWN", "DAC_OVERRIDE", "FOWNER", "SETGID", "SETUID"]
           env:
             - name: VUE_APP_PRODUCT_SERVICE_URL
               value: "http://product-service:3002/"
