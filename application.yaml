@@ -117,15 +117,9 @@ spec:
             failureThreshold: 6
           env:
             - name: RABBITMQ_DEFAULT_USER
-              valueFrom:
-                secretKeyRef:
-                  name: rabbitmq-credentials
-                  key: RABBITMQ_DEFAULT_USER
+              value: "guest"
             - name: RABBITMQ_DEFAULT_PASS
-              valueFrom:
-                secretKeyRef:
-                  name: rabbitmq-credentials
-                  key: RABBITMQ_DEFAULT_PASS
+              value: "guest"
 
 ---
 apiVersion: v1
@@ -374,15 +368,9 @@ spec:
             - name: ORDER_QUEUE_PORT
               value: "5672"
             - name: ORDER_QUEUE_USERNAME
-              valueFrom:
-                secretKeyRef:
-                  name: rabbitmq-credentials
-                  key: RABBITMQ_DEFAULT_USER
+              value: "guest"
             - name: ORDER_QUEUE_PASSWORD
-              valueFrom:
-                secretKeyRef:
-                  name: rabbitmq-credentials
-                  key: RABBITMQ_DEFAULT_PASS
+              value: "guest"
             - name: ORDER_QUEUE_NAME
               value: "orders"
             - name: FASTIFY_ADDRESS
@@ -474,22 +462,13 @@ spec:
             - name: ORDER_QUEUE_URI
               value: "amqp://rabbitmq:5672/"
             - name: ORDER_QUEUE_USERNAME
-              valueFrom:
-                secretKeyRef:
-                  name: rabbitmq-credentials
-                  key: RABBITMQ_DEFAULT_USER
+              value: "guest"
             - name: ORDER_QUEUE_PASSWORD
-              valueFrom:
-                secretKeyRef:
-                  name: rabbitmq-credentials
-                  key: RABBITMQ_DEFAULT_PASS
+              value: "guest"
             - name: ORDER_QUEUE_NAME
               value: "orders"
             - name: ORDER_DB_URI
-              valueFrom:
-                secretKeyRef:
-                  name: mongodb-credentials
-                  key: ORDER_DB_URI
+              value: "mongodb://admin:mongoSecurePass2024@mongodb:27017"
             - name: ORDER_DB_NAME
               value: "orderdb"
             - name: ORDER_DB_COLLECTION_NAME
