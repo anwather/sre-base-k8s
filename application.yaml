@@ -30,6 +30,36 @@ metadata:
 
 ---
 # =============================================================================
+# Secrets - Credentials for data services
+# =============================================================================
+apiVersion: v1
+kind: Secret
+metadata:
+  name: rabbitmq-credentials
+  namespace: pets
+  labels:
+    app.kubernetes.io/part-of: aks-store-demo
+type: Opaque
+stringData:
+  RABBITMQ_DEFAULT_USER: "guest"
+  RABBITMQ_DEFAULT_PASS: "guest"
+
+---
+apiVersion: v1
+kind: Secret
+metadata:
+  name: mongodb-credentials
+  namespace: pets
+  labels:
+    app.kubernetes.io/part-of: aks-store-demo
+type: Opaque
+stringData:
+  MONGO_INITDB_ROOT_USERNAME: "admin"
+  MONGO_INITDB_ROOT_PASSWORD: "mongoSecurePass2024"
+  ORDER_DB_URI: "mongodb://admin:mongoSecurePass2024@mongodb:27017"
+
+---
+# =============================================================================
 # RabbitMQ - Message Queue
 # =============================================================================
 apiVersion: apps/v1
@@ -66,6 +96,10 @@ spec:
             limits:
               memory: "512Mi"
               cpu: "500m"
+          securityContext:
+            allowPrivilegeEscalation: false
+            capabilities:
+              drop: ["ALL"]
           livenessProbe:
             exec:
               command: ["rabbitmq-diagnostics", "check_port_connectivity"]
@@ -82,9 +116,15 @@ spec:
             failureThreshold: 6
           env:
             - name: RABBITMQ_DEFAULT_USER
-              value: "guest"
+              valueFrom:
+                secretKeyRef:
+                  name: rabbitmq-credentials
+                  key: RABBITMQ_DEFAULT_USER
             - name: RABBITMQ_DEFAULT_PASS
-              value: "guest"
+              valueFrom:
+                secretKeyRef:
+                  name: rabbitmq-credentials
+                  key: RABBITMQ_DEFAULT_PASS
 
 ---
 apiVersion: v1
@@ -157,6 +197,21 @@ spec:
             limits:
               memory: "512Mi"
               cpu: "500m"
+          securityContext:
+            allowPrivilegeEscalation: false
+            capabilities:
+              drop: ["ALL"]
+          env:
+            - name: MONGO_INITDB_ROOT_USERNAME
+              valueFrom:
+                secretKeyRef:
+                  name: mongodb-credentials
+                  key: MONGO_INITDB_ROOT_USERNAME
+            - name: MONGO_INITDB_ROOT_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: mongodb-credentials
+                  key: MONGO_INITDB_ROOT_PASSWORD
           volumeMounts:
             - name: mongodb-data
               mountPath: /data/db
@@ -201,6 +256,18 @@ spec:
     spec:
       nodeSelector:
         nodepool-type: user
+      affinity:
+        podAntiAffinity:
+          preferredDuringSchedulingIgnoredDuringExecution:
+            - weight: 100
+              podAffinityTerm:
+                labelSelector:
+                  matchExpressions:
+                    - key: app
+                      operator: In
+                      values:
+                        - product-service
+                topologyKey: kubernetes.io/hostname
       containers:
         - name: product-service
           image: ghcr.io/azure-samples/aks-store-demo/product-service:2.2.0
@@ -213,6 +280,12 @@ spec:
             limits:
               memory: "128Mi"
               cpu: "100m"
+          securityContext:
+            runAsNonRoot: true
+            readOnlyRootFilesystem: true
+            allowPrivilegeEscalation: false
+            capabilities:
+              drop: ["ALL"]
           env:
             - name: AI_SERVICE_URL
               value: "http://ai-service:5001/"
@@ -265,6 +338,18 @@ spec:
     spec:
       nodeSelector:
         nodepool-type: user
+      affinity:
+        podAntiAffinity:
+          preferredDuringSchedulingIgnoredDuringExecution:
+            - weight: 100
+              podAffinityTerm:
+                labelSelector:
+                  matchExpressions:
+                    - key: app
+                      operator: In
+                      values:
+                        - order-service
+                topologyKey: kubernetes.io/hostname
       containers:
         - name: order-service
           image: ghcr.io/azure-samples/aks-store-demo/order-service:2.2.0
@@ -277,15 +362,27 @@ spec:
             limits:
               memory: "256Mi"
               cpu: "200m"
+          securityContext:
+            runAsNonRoot: true
+            readOnlyRootFilesystem: true
+            allowPrivilegeEscalation: false
+            capabilities:
+              drop: ["ALL"]
           env:
             - name: ORDER_QUEUE_HOSTNAME
               value: "rabbitmq"
             - name: ORDER_QUEUE_PORT
               value: "5672"
             - name: ORDER_QUEUE_USERNAME
-              value: "guest"
+              valueFrom:
+                secretKeyRef:
+                  name: rabbitmq-credentials
+                  key: RABBITMQ_DEFAULT_USER
             - name: ORDER_QUEUE_PASSWORD
-              value: "guest"
+              valueFrom:
+                secretKeyRef:
+                  name: rabbitmq-credentials
+                  key: RABBITMQ_DEFAULT_PASS
             - name: ORDER_QUEUE_NAME
               value: "orders"
             - name: FASTIFY_ADDRESS
@@ -345,6 +442,18 @@ spec:
     spec:
       nodeSelector:
         nodepool-type: user
+      affinity:
+        podAntiAffinity:
+          preferredDuringSchedulingIgnoredDuringExecution:
+            - weight: 100
+              podAffinityTerm:
+                labelSelector:
+                  matchExpressions:
+                    - key: app
+                      operator: In
+                      values:
+                        - makeline-service
+                topologyKey: kubernetes.io/hostname
       containers:
         - name: makeline-service
           image: ghcr.io/azure-samples/aks-store-demo/makeline-service:2.2.0
@@ -357,17 +466,32 @@ spec:
             limits:
               memory: "128Mi"
               cpu: "100m"
+          securityContext:
+            runAsNonRoot: true
+            readOnlyRootFilesystem: true
+            allowPrivilegeEscalation: false
+            capabilities:
+              drop: ["ALL"]
           env:
             - name: ORDER_QUEUE_URI
-              value: "amqp://guest:guest@rabbitmq:5672/"
+              value: "amqp://rabbitmq:5672/"
             - name: ORDER_QUEUE_USERNAME
-              value: "guest"
+              valueFrom:
+                secretKeyRef:
+                  name: rabbitmq-credentials
+                  key: RABBITMQ_DEFAULT_USER
             - name: ORDER_QUEUE_PASSWORD
-              value: "guest"
+              valueFrom:
+                secretKeyRef:
+                  name: rabbitmq-credentials
+                  key: RABBITMQ_DEFAULT_PASS
             - name: ORDER_QUEUE_NAME
               value: "orders"
             - name: ORDER_DB_URI
-              value: "mongodb://mongodb:27017"
+              valueFrom:
+                secretKeyRef:
+                  name: mongodb-credentials
+                  key: ORDER_DB_URI
             - name: ORDER_DB_NAME
               value: "orderdb"
             - name: ORDER_DB_COLLECTION_NAME
@@ -421,6 +545,18 @@ spec:
     spec:
       nodeSelector:
         nodepool-type: user
+      affinity:
+        podAntiAffinity:
+          preferredDuringSchedulingIgnoredDuringExecution:
+            - weight: 100
+              podAffinityTerm:
+                labelSelector:
+                  matchExpressions:
+                    - key: app
+                      operator: In
+                      values:
+                        - store-front
+                topologyKey: kubernetes.io/hostname
       containers:
         - name: store-front
           image: ghcr.io/azure-samples/aks-store-demo/store-front:2.2.0
@@ -433,6 +569,12 @@ spec:
             limits:
               memory: "128Mi"
               cpu: "100m"
+          securityContext:
+            runAsNonRoot: true
+            readOnlyRootFilesystem: true
+            allowPrivilegeEscalation: false
+            capabilities:
+              drop: ["ALL"]
           env:
             - name: VUE_APP_ORDER_SERVICE_URL
               value: "http://order-service:3000/"
@@ -500,6 +642,12 @@ spec:
             limits:
               memory: "128Mi"
               cpu: "100m"
+          securityContext:
+            runAsNonRoot: true
+            readOnlyRootFilesystem: true
+            allowPrivilegeEscalation: false
+            capabilities:
+              drop: ["ALL"]
           env:
             - name: VUE_APP_PRODUCT_SERVICE_URL
               value: "http://product-service:3002/"
@@ -565,6 +713,12 @@ spec:
             limits:
               memory: "64Mi"
               cpu: "50m"
+          securityContext:
+            runAsNonRoot: true
+            readOnlyRootFilesystem: true
+            allowPrivilegeEscalation: false
+            capabilities:
+              drop: ["ALL"]
           env:
             - name: ORDER_SERVICE_URL
               value: "http://order-service:3000/"
@@ -604,8 +758,233 @@ spec:
             limits:
               memory: "64Mi"
               cpu: "50m"
+          securityContext:
+            runAsNonRoot: true
+            readOnlyRootFilesystem: true
+            allowPrivilegeEscalation: false
+            capabilities:
+              drop: ["ALL"]
           env:
             - name: MAKELINE_SERVICE_URL
               value: "http://makeline-service:3001"
             - name: ORDERS_PER_HOUR
               value: "100"
+
+---
+# =============================================================================
+# Network Policies - Restrict pod-to-pod communication
+# =============================================================================
+
+# Default deny all ingress traffic in the namespace
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: default-deny-ingress
+  namespace: pets
+spec:
+  podSelector: {}
+  policyTypes:
+    - Ingress
+
+---
+# Allow store-front to receive traffic from the LoadBalancer
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: allow-store-front-ingress
+  namespace: pets
+spec:
+  podSelector:
+    matchLabels:
+      app: store-front
+  policyTypes:
+    - Ingress
+  ingress:
+    - ports:
+        - port: 8080
+
+---
+# Allow store-admin to receive traffic from the LoadBalancer
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: allow-store-admin-ingress
+  namespace: pets
+spec:
+  podSelector:
+    matchLabels:
+      app: store-admin
+  policyTypes:
+    - Ingress
+  ingress:
+    - ports:
+        - port: 8081
+
+---
+# Allow order-service to receive traffic from store-front and virtual-customer
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: allow-order-service-ingress
+  namespace: pets
+spec:
+  podSelector:
+    matchLabels:
+      app: order-service
+  policyTypes:
+    - Ingress
+  ingress:
+    - from:
+        - podSelector:
+            matchLabels:
+              app: store-front
+        - podSelector:
+            matchLabels:
+              app: virtual-customer
+      ports:
+        - port: 3000
+
+---
+# Allow product-service to receive traffic from store-front and store-admin
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: allow-product-service-ingress
+  namespace: pets
+spec:
+  podSelector:
+    matchLabels:
+      app: product-service
+  policyTypes:
+    - Ingress
+  ingress:
+    - from:
+        - podSelector:
+            matchLabels:
+              app: store-front
+        - podSelector:
+            matchLabels:
+              app: store-admin
+      ports:
+        - port: 3002
+
+---
+# Allow makeline-service to receive traffic from store-admin and virtual-worker
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: allow-makeline-service-ingress
+  namespace: pets
+spec:
+  podSelector:
+    matchLabels:
+      app: makeline-service
+  policyTypes:
+    - Ingress
+  ingress:
+    - from:
+        - podSelector:
+            matchLabels:
+              app: store-admin
+        - podSelector:
+            matchLabels:
+              app: virtual-worker
+      ports:
+        - port: 3001
+
+---
+# Allow rabbitmq to receive traffic from order-service and makeline-service
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: allow-rabbitmq-ingress
+  namespace: pets
+spec:
+  podSelector:
+    matchLabels:
+      app: rabbitmq
+  policyTypes:
+    - Ingress
+  ingress:
+    - from:
+        - podSelector:
+            matchLabels:
+              app: order-service
+        - podSelector:
+            matchLabels:
+              app: makeline-service
+      ports:
+        - port: 5672
+        - port: 15672
+
+---
+# Allow mongodb to receive traffic from makeline-service only
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: allow-mongodb-ingress
+  namespace: pets
+spec:
+  podSelector:
+    matchLabels:
+      app: mongodb
+  policyTypes:
+    - Ingress
+  ingress:
+    - from:
+        - podSelector:
+            matchLabels:
+              app: makeline-service
+      ports:
+        - port: 27017
+
+---
+# =============================================================================
+# Pod Disruption Budgets - Protect availability during node maintenance
+# =============================================================================
+apiVersion: policy/v1
+kind: PodDisruptionBudget
+metadata:
+  name: store-front-pdb
+  namespace: pets
+spec:
+  minAvailable: 1
+  selector:
+    matchLabels:
+      app: store-front
+
+---
+apiVersion: policy/v1
+kind: PodDisruptionBudget
+metadata:
+  name: order-service-pdb
+  namespace: pets
+spec:
+  minAvailable: 1
+  selector:
+    matchLabels:
+      app: order-service
+
+---
+apiVersion: policy/v1
+kind: PodDisruptionBudget
+metadata:
+  name: product-service-pdb
+  namespace: pets
+spec:
+  minAvailable: 1
+  selector:
+    matchLabels:
+      app: product-service
+
+---
+apiVersion: policy/v1
+kind: PodDisruptionBudget
+metadata:
+  name: makeline-service-pdb
+  namespace: pets
+spec:
+  minAvailable: 1
+  selector:
+    matchLabels:
+      app: makeline-service
