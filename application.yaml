@@ -100,6 +100,7 @@ spec:
             allowPrivilegeEscalation: false
             capabilities:
               drop: ["ALL"]
+              add: ["CHOWN", "DAC_OVERRIDE", "FOWNER", "SETGID", "SETUID"]
           livenessProbe:
             exec:
               command: ["rabbitmq-diagnostics", "check_port_connectivity"]
@@ -175,6 +176,8 @@ metadata:
     app: mongodb
 spec:
   replicas: 1
+  strategy:
+    type: Recreate
   selector:
     matchLabels:
       app: mongodb
@@ -201,6 +204,7 @@ spec:
             allowPrivilegeEscalation: false
             capabilities:
               drop: ["ALL"]
+              add: ["CHOWN", "DAC_OVERRIDE", "FOWNER", "SETGID", "SETUID"]
           env:
             - name: MONGO_INITDB_ROOT_USERNAME
               valueFrom:
@@ -281,8 +285,6 @@ spec:
               memory: "128Mi"
               cpu: "100m"
           securityContext:
-            runAsNonRoot: true
-            readOnlyRootFilesystem: true
             allowPrivilegeEscalation: false
             capabilities:
               drop: ["ALL"]
@@ -363,8 +365,6 @@ spec:
               memory: "256Mi"
               cpu: "200m"
           securityContext:
-            runAsNonRoot: true
-            readOnlyRootFilesystem: true
             allowPrivilegeEscalation: false
             capabilities:
               drop: ["ALL"]
@@ -467,8 +467,6 @@ spec:
               memory: "128Mi"
               cpu: "100m"
           securityContext:
-            runAsNonRoot: true
-            readOnlyRootFilesystem: true
             allowPrivilegeEscalation: false
             capabilities:
               drop: ["ALL"]
@@ -570,8 +568,6 @@ spec:
               memory: "128Mi"
               cpu: "100m"
           securityContext:
-            runAsNonRoot: true
-            readOnlyRootFilesystem: true
             allowPrivilegeEscalation: false
             capabilities:
               drop: ["ALL"]
@@ -643,8 +639,6 @@ spec:
               memory: "128Mi"
               cpu: "100m"
           securityContext:
-            runAsNonRoot: true
-            readOnlyRootFilesystem: true
             allowPrivilegeEscalation: false
             capabilities:
               drop: ["ALL"]
@@ -714,8 +708,6 @@ spec:
               memory: "64Mi"
               cpu: "50m"
           securityContext:
-            runAsNonRoot: true
-            readOnlyRootFilesystem: true
             allowPrivilegeEscalation: false
             capabilities:
               drop: ["ALL"]
@@ -759,8 +751,6 @@ spec:
               memory: "64Mi"
               cpu: "50m"
           securityContext:
-            runAsNonRoot: true
-            readOnlyRootFilesystem: true
             allowPrivilegeEscalation: false
             capabilities:
               drop: ["ALL"]
